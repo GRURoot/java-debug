@@ -7,7 +7,7 @@
  *
  * Contributors:
  *     Microsoft Corporation - initial API and implementation
-*******************************************************************************/
+ *******************************************************************************/
 
 package com.microsoft.java.debug.plugin.internal;
 
@@ -36,11 +36,12 @@ import com.sun.jdi.connect.LaunchingConnector;
 import com.sun.jdi.connect.VMStartException;
 
 /**
- * An advanced launching connector that supports cwd and enviroment variables.
+ * An advanced launching connector that supports cwd and environment variables.
  *
  */
 public class AdvancedLaunchingConnector extends SocketLaunchingConnectorImpl implements LaunchingConnector {
-    private static final int ACCEPT_TIMEOUT = 10 * 1000;
+    // FIX: Make timeout configurable via system property, default 30 seconds
+    private static final int ACCEPT_TIMEOUT = Integer.parseInt(System.getProperty("java.debug.vm.connect.timeout", "30000"));
 
     public AdvancedLaunchingConnector(VirtualMachineManagerImpl virtualMachineManager) {
         super(virtualMachineManager);
@@ -117,8 +118,9 @@ public class AdvancedLaunchingConnector extends SocketLaunchingConnectorImpl imp
 
                 process.destroy();
 
+                // FIX: More descriptive error message with diagnostic hints
                 result.completeExceptionally(new LaunchException(
-                    String.format("VM did not connect within given time: %d ms", ACCEPT_TIMEOUT),
+                    String.format("VM did not connect within %d ms. Verify: 1) Java installation, 2) Debugger port availability, 3) Firewall settings, 4) JVM options", ACCEPT_TIMEOUT),
                     process,
                     false,
                     -1,
@@ -177,11 +179,21 @@ public class AdvancedLaunchingConnector extends SocketLaunchingConnectorImpl imp
         }
     }
 
+    // FIX: Properly close input stream to avoid resource leaks
     private String streamToString(final InputStream inputStream) {
         try {
             return IOUtils.toString(inputStream, StandardCharsets.UTF_8);
         } catch (IOException ioe) {
-            return null;
+            return "Failed to read stream: " + ioe.getMessage();
+        } finally {
+            // FIX: Always close the stream to prevent resource leaks
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    // Ignore close exceptions
+                }
+            }
         }
     }
 
