@@ -1,13 +1,13 @@
 /*******************************************************************************
-* Copyright (c) 2017-2022 Microsoft Corporation and others.
-* All rights reserved. This program and the accompanying materials
-* are made available under the terms of the Eclipse Public License v1.0
-* which accompanies this distribution, and is available at
-* http://www.eclipse.org/legal/epl-v10.html
-*
-* Contributors:
-*     Microsoft Corporation - initial API and implementation
-*******************************************************************************/
+ * Copyright (c) 2017-2022 Microsoft Corporation and others.
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Microsoft Corporation - initial API and implementation
+ *******************************************************************************/
 
 package com.microsoft.java.debug.core.protocol;
 
@@ -80,7 +80,14 @@ public abstract class AbstractProtocolServer implements IProtocolServer {
             try {
                 this.dispatchRequest(request);
             } catch (Exception e) {
-                logger.log(Level.SEVERE, String.format("Dispatch debug protocol error: %s", e.toString()), e);
+                // FIX: Map exceptions to proper error codes for better debugging
+                int errorCode = ErrorCode.UNKNOWN_FAILURE.getId();
+                if (e instanceof IllegalArgumentException) {
+                    errorCode = ErrorCode.ARGUMENT_MISSING.getId();
+                } else if (e instanceof UnsupportedOperationException) {
+                    errorCode = ErrorCode.UNRECOGNIZED_REQUEST_FAILURE.getId();
+                }
+                logger.log(Level.SEVERE, String.format("Dispatch debug protocol error [%d]: %s", errorCode, e.toString()), e);
             }
         });
     }
